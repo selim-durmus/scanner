@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Gold document page with a folded top-right corner (centered in the safe zone). -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M44,41 L57,41 L64,48 L64,69 Q64,70 63,70 L45,70 Q44,70 44,69 L44,42 Q44,41 44,41 Z" />
+    <!-- Folded corner (darker gold). -->
+    <path
+        android:fillColor="#AA8929"
+        android:pathData="M57,41 L64,48 L57,48 Z" />
+
+    <!-- Text lines on the page (dark, suggesting a scanned document). -->
+    <path
+        android:strokeColor="#141414"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,53 L59,53" />
+    <path
+        android:strokeColor="#141414"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,58 L59,58" />
+    <path
+        android:strokeColor="#141414"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,63 L55,63" />
+
+    <!-- Scanner viewfinder brackets framing the page (gold). -->
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M33,45 L33,33 L45,33" />
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M63,33 L75,33 L75,45" />
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M33,63 L33,75 L45,75" />
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M63,75 L75,75 L75,63" />
+</vector>

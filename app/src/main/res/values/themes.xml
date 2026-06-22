@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Dark-only base theme. Compose supplies the real Material 3 colors;
+         this just sets the window/splash background so there's no light flash. -->
+    <style name="Theme.Scanner" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/scanner_background</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

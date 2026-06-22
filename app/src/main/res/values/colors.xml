@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Gold accent + near-black background for the window/splash. -->
+    <color name="scanner_gold">#D4AF37</color>
+    <color name="scanner_background">#0F0F0F</color>
+</resources>
