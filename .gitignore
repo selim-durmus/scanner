@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# AI assistant & local scratch docs (README.md and real docs stay tracked).
+# Use the *.local.md suffix for personal notes you don't want committed.
+.claude/
+*.local.md
+/scratch/
