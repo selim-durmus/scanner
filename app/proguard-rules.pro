@@ -7,4 +7,12 @@
 -dontwarn javax.**
 -dontwarn org.bouncycastle.**
 
-# ML Kit, Room and Compose ship their own consumer rules.
+# ML Kit wires its pieces together by reflection (component registrars found through the
+# manifest). AGP 9 runs R8 in full mode, which strips fields its own consumer rules don't
+# cover: text recognition then fails with an NPE inside TextRecognition.getClient().
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_** { *; }
+-keep class * implements com.google.firebase.components.ComponentRegistrar { *; }
+-dontwarn com.google.mlkit.**
+
+# Room and Compose ship their own consumer rules.

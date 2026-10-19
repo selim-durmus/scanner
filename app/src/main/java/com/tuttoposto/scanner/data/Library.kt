@@ -451,7 +451,8 @@ class Library(private val context: Context, val settings: Settings, private val 
         reindexOne(folder, doc.id)
     }
 
-    private fun work(name: String) = File(workDir, "${System.nanoTime()}-$name")
+    // Android may clear the cache directory at any time, so recreate it on every use.
+    private fun work(name: String) = File(workDir.apply { mkdirs() }, "${System.nanoTime()}-$name")
 
     private fun displayName(uri: Uri): String? = runCatching {
         resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->

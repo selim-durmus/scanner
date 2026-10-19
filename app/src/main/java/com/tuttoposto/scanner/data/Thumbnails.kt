@@ -60,6 +60,7 @@ class Thumbnails(private val resolver: ContentResolver, cacheDir: File) {
 
     private fun writeDisk(key: String, bmp: Bitmap) {
         runCatching {
+            dir.mkdirs() // the cache directory can be cleared under us
             val tmp = File(dir, "${file(key).name}.tmp")
             tmp.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 82, it) }
             tmp.renameTo(file(key))

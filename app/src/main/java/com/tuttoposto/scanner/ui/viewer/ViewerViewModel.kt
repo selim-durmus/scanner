@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -24,9 +26,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
-/** Page shapes of the open file. [version] is the file's modified time, so edits re-render. */
-data class PdfLayout(val version: Long, val aspects: List<Float>)
+/**
+ * Page shapes of the open file. [version] is the file's modified time, so edits re-render.
+ * [broken] means the file didn't open as a PDF (empty, damaged, or still being copied).
+ */
+data class PdfLayout(val version: Long, val aspects: List<Float>, val broken: Boolean = false)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ViewerViewModel(private val library: Library, initialId: String) : ViewModel() {
@@ -35,6 +41,15 @@ class ViewerViewModel(private val library: Library, initialId: String) : ViewMod
 
     val doc: StateFlow<Doc?> = id.flatMapLatest { library.observe(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, library.find(initialId))
+
+    private val renaming = MutableStateFlow(false)
+
+    /**
+     * True once the document is really gone (deleted here or elsewhere). A rename changes the id,
+     * so the old id briefly has no document; that doesn't count.
+     */
+    val gone: StateFlow<Boolean> = combine(doc, renaming) { d, r -> d == null && !r }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _layout = MutableStateFlow<PdfLayout?>(null)
     val layout: StateFlow<PdfLayout?> = _layout.asStateFlow()
@@ -71,7 +86,7 @@ class ViewerViewModel(private val library: Library, initialId: String) : ViewMod
         }
         _layout.value = fresh?.let { p ->
             PdfLayout(d.modified, p.aspects() ?: List(p.pageCount) { A4 })
-        }
+        } ?: PdfLayout(d.modified, emptyList(), broken = true)
     }
 
     fun cachedPage(page: Int, widthPx: Int): Bitmap? =
@@ -103,7 +118,17 @@ class ViewerViewModel(private val library: Library, initialId: String) : ViewMod
 
     suspend fun rename(title: String): RenameResult {
         val d = doc.value ?: return RenameResult.Failed
-        return library.rename(d, title).also { if (it is RenameResult.Done) id.value = it.id }
+        renaming.value = true
+        try {
+            val result = library.rename(d, title)
+            if (result is RenameResult.Done) {
+                id.value = result.id
+                withTimeoutOrNull(2_000) { doc.first { it?.id == result.id } }
+            }
+            return result
+        } finally {
+            renaming.value = false
+        }
     }
 
     fun delete() {

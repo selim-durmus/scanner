@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Subject
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -70,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -106,9 +108,10 @@ fun ViewerScreen(
     val reading by vm.reading.collectAsStateWithLifecycle()
 
     // Deleted (here or elsewhere) or renamed away in the Files app: nothing left to show.
+    val gone by vm.gone.collectAsStateWithLifecycle()
     var seenDoc by remember { mutableStateOf(false) }
-    LaunchedEffect(doc) {
-        if (doc != null) seenDoc = true else if (seenDoc) onBack()
+    LaunchedEffect(doc, gone) {
+        if (doc != null) seenDoc = true else if (seenDoc && gone) onBack()
     }
 
     val pageCount = layout?.aspects?.size ?: doc?.pageCount ?: 0
@@ -165,6 +168,26 @@ fun ViewerScreen(
                         TextLayer(lines, selected, { selected = it })
                     }
                 }
+            }
+        } else if (l?.broken == true || (l != null && pageCount == 0)) {
+            Column(
+                Modifier
+                    .align(Alignment.Center)
+                    .padding(40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Outlined.BrokenImage, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                Text("This file won't open", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "It may be empty, damaged, or still being copied. Another PDF app might manage it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(onClick = { doc?.let { Share.openWith(context, it) } }) { Text("Open with…") }
             }
         } else {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -291,9 +314,9 @@ fun ViewerScreen(
                             ToolButton(Icons.AutoMirrored.Outlined.Subject, "All text", { showText = true })
                             ToolButton(Icons.Outlined.Done, "Done", { textMode = false; selected = emptySet() }, active = true)
                         } else {
-                            ToolButton(Icons.Outlined.TextFields, "Text", { textMode = true; chrome = true })
+                            ToolButton(Icons.Outlined.TextFields, "Text", { textMode = true; chrome = true }, enabled = pageCount > 0)
                             ToolButton(Icons.Outlined.ViewModule, "Arrange", { onArrange(vm.currentId) }, enabled = pageCount > 0)
-                            ToolButton(Icons.Outlined.AddPhotoAlternate, "Add pages", { actions.scan(vm.currentId) })
+                            ToolButton(Icons.Outlined.AddPhotoAlternate, "Add pages", { actions.scan(vm.currentId) }, enabled = pageCount > 0)
                             ToolButton(Icons.Outlined.Share, "Share", { doc?.let { Share.pdfs(context, listOf(it)) } })
                         }
                     }
