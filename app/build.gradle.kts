@@ -1,79 +1,116 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.example.scanner"
-    compileSdk {
-        version = release(37)
-    }
+    namespace = "com.tuttoposto.scanner"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.scanner"
-        minSdk = 29
-        targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // v1 shipped as a debug-signed com.example.scanner. v2 is a fresh package so both
+        // install side by side. No data moves: both keep their PDFs in Documents/Scanner.
+        applicationId = "com.tuttoposto.scanner"
+        minSdk = 31
+        targetSdk = 36
+        versionCode = 2
+        versionName = "2.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["appLabel"] = "Scanner"
+    }
+
+    // Release signing lives outside the repo, in ~/.gradle/gradle.properties:
+    //   scannerKeystore, scannerKeystorePassword, scannerKeyAlias
+    // Without them, assembleRelease still works but produces an unsigned APK.
+    // Keep that keystore backed up: updates only install over an APK signed by the same key.
+    val releaseKeystore = providers.gradleProperty("scannerKeystore").orNull
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = providers.gradleProperty("scannerKeystorePassword").get()
+                keyAlias = providers.gradleProperty("scannerKeyAlias").get()
+                keyPassword = storePassword
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            // Separate package so debug installs never share settings or the index with the real app.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "Scanner (debug)"
+        }
         release {
-            // R8/minify stripped runtime internals of PdfBox (Add pages) and ML Kit (OCR),
-            // so it's left off — release then behaves identically to debug. Trade-off is a
-            // larger APK; revisit with logcat-driven keep rules if size matters.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
-            // Personal app: sign the release with the debug key so it builds/installs
-            // straight from Android Studio. Swap for a real keystore if distributing.
-            signingConfig = signingConfigs.getByName("debug")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+
+    lint {
+        checkReleaseBuilds = true
+        abortOnError = true
+        disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "NewerVersionAvailable")
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
+    packaging {
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.generateKotlin", "true")
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-
-    // Compose
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
 
-    // ML Kit Document Scanner + Text Recognition (OCR)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Camera capture (edge detection, crop, filters) and on-device OCR, both via Play services.
     implementation(libs.mlkit.document.scanner)
     implementation(libs.mlkit.text.recognition)
 
-    // PDF merge/append
+    // Page edits: merge, reorder, rotate, delete.
     implementation(libs.pdfbox.android)
 
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
 }
