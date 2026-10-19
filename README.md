@@ -1,40 +1,56 @@
 # Scanner
 
-A lightweight, **dark-mode** PDF scanner for Android. Capture documents with the
-camera, save them as PDFs, and manage a small library — minimalist UI with a gold accent.
+A dark, black-and-gold document scanner for Android. Scans are plain PDFs in a folder you
+choose, every page's text is searchable, and pages can be rearranged after the fact.
 Built for personal use.
+
+Version 2 is a rewrite of the first (Codex-built) version. It installs as a separate app,
+`com.tuttoposto.scanner`, so both can sit side by side while you switch over.
 
 ## Features
 
-- **Capture** via Google ML Kit document scanner — live edge detection, auto-crop,
-  perspective correction, multi-page, gallery import.
-- **Saved as PDFs** to the shared `Documents/Scanner` folder (visible in the Files app and
-  other apps; no storage permission needed).
-- **Library** — thumbnails, page counts, search, rename, share, delete, and multi-select
-  batch share/delete.
-- **In-app viewer** with a Google-Lens-style **selectable OCR text overlay**: long-press to
-  select recognized text on the page and copy it (or "Copy all text").
-- **Append pages** to an existing PDF (re-scan and merge).
-- **Extract text** via ML Kit text recognition.
+- **Scan** with Google's ML Kit document scanner: edge detection, crop, perspective
+  correction, filters, multi-page. Auto-enhance is off by default (plain crop), switchable
+  in Settings.
+- **Your folder, your files.** On first launch you pick a folder (Documents/Scanner is
+  suggested). Every PDF in it shows up, whichever app made it, and the files stay put if
+  the app is uninstalled. No storage permission needed.
+- **Search inside scans.** Text is recognized on the device in the background; search
+  matches names and page text and opens the matching page.
+- **Viewer** with pinch and double-tap zoom. **Text mode**: tap or drag across lines to
+  select and copy them, or see the whole document's text.
+- **Arrange pages**: hold and drag to reorder, rotate, remove. Changes are saved only when
+  you tap Save.
+- **Add pages** to a document by scanning more; **merge** documents; **import** PDFs and
+  photos (photos become one PDF).
+- **Name suggestions** read off the first page right after a scan.
+- **Delete with undo**; grid or list view; sort by date, name or size.
 
-## Tech
+## How it's built
 
-- Kotlin, Jetpack Compose, Material 3 (dark-only, gold palette)
-- ML Kit document scanner + text recognition (Google Play Services)
-- PdfBox-Android (PDF merge/append), Android `PdfRenderer`, MediaStore
-- `minSdk` 29 · `compileSdk`/`targetSdk` 37 · AGP 9.2.1 · Kotlin 2.2.10
+- Kotlin, Jetpack Compose, Material 3. `minSdk` 31, `targetSdk` 36, AGP 9.0.1, Gradle 9.1.
+- `data/LibraryFolder`: the chosen folder through the Storage Access Framework.
+- `data/Library`: syncs the folder into a Room index (page counts, recognized text),
+  runs the background text reader, and does all writes. Edited PDFs are built in a work
+  file, checked, and only then copied over the original (with a backup kept until it
+  succeeds).
+- `data/PdfEditor`: PdfBox-Android for append, merge, reorder/rotate/remove and
+  photos→PDF. `PdfRenderer` for display.
+- `logic/`: pure, unit-tested helpers (names, search snippets, folder sync plan, page edits).
 
 ## Build & run
 
-1. Open the project in **Android Studio** and let Gradle sync.
-2. **Run** on a device or emulator with **Google Play Services**, Android 10 (API 29)+.
-   ML Kit models download on first use, so the device needs network access.
-3. **Release build** is signed with the debug key, so it installs straight from Android
-   Studio (Build → Build APK(s), or select the `release` variant). R8/minify is intentionally
-   disabled — it strips PdfBox/ML Kit internals at runtime.
+1. Open in Android Studio, or build with JDK 17: `./gradlew :app:assembleRelease`.
+2. Needs a device with Google Play services (the scanner and text recognition come from it).
+3. Release signing reads `scannerKeystore`, `scannerKeystorePassword` and
+   `scannerKeyAlias` from `~/.gradle/gradle.properties`. Without them the release APK is
+   unsigned. **Back up the keystore**: updates only install over an APK signed with the
+   same key.
+4. Debug builds install as `com.tuttoposto.scanner.debug`, separate from the real app.
 
-## Notes
+R8 is on for release. ML Kit and PdfBox need the keep rules in `app/proguard-rules.pro`;
+without them text recognition fails in release only.
 
-- Requires Google Play Services (the scanner and OCR ship through it) — a plain AOSP
-  emulator without Play won't run the scan/OCR features.
-- Dark mode only, by design.
+## Tests
+
+`./gradlew :app:testDebugUnitTest` runs the unit tests for the `logic/` package.
